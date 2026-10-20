@@ -4,6 +4,8 @@ Students pump air into a balloon taped to a straw, release it, and measure how f
 
 **The simulator is one file: `dist/balloon-rocket.html`** (about 64 KB). It works offline, needs no install, and makes no network requests.
 
+**Try it online:** https://mrvanloo.github.io/balloon-rocket-car/ (needs internet; the downloaded file works offline).
+
 ## Share it with students
 
 1. Share `dist/balloon-rocket.html` as a **download** (Google Classroom attachment, Drive "Download", or a USB stick).
@@ -43,6 +45,7 @@ node build.mjs
 - `src/` holds the page (`index.html`, `style.css`) and scripts. `src/index.html` also runs directly in Chrome while developing.
 - `build.mjs` inlines `src/` into `dist/balloon-rocket.html` and fails if the file is over 150 KB or anything external is still linked.
 - `CLAUDE.md` lists the project decisions and where each part of the code lives. `SPEC.md` is the full spec and the source of every physics constant.
+- `index.html` and `.nojekyll` at the root are only for GitHub Pages; `index.html` redirects to `dist/balloon-rocket.html`.
 - `reference/` holds the original mockup and physics draft, kept for reference only.
 
 ## Acceptance tests
