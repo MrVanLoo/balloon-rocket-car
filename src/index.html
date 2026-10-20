@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Balloon rocket car</title>
+<!-- build.mjs replaces each local stylesheet link and script tag below with its file's contents. -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Balloon rocket car</h1>
+  <p>Pump air into the balloon, let it go, and see how far it rides along the string.</p>
+  <div class="hbtns">
+    <button id="srcBtn" type="button">Sources</button>
+    <button id="setBtn" class="iconbtn" type="button" aria-label="Teacher settings" title="Teacher settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.4 7.4 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .3.2.5.5.5h4c.3 0 .5-.2.5-.4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<section class="stage" aria-label="Balloon rocket track">
+  <svg id="scene" viewBox="0 14 1000 186" role="img" aria-labelledby="sceneTitle">
+    <title id="sceneTitle">A balloon taped to a straw on a level string, with a tape measure below it</title>
+    <defs>
+      <marker id="mThrust" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" class="fthrust"/></marker>
+      <marker id="mDrag" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" class="fdrag"/></marker>
+      <marker id="mFric" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" class="ffric"/></marker>
+    </defs>
+    <rect class="post" x="26" y="58" width="12" height="130" rx="3"/>
+    <rect id="postEnd" class="post" x="962" y="58" width="12" height="130" rx="3"/>
+    <line class="str" x1="32" y1="70" x2="968" y2="70" stroke-width="2"/>
+    <g id="tapeG"></g>
+    <line id="plumb" class="plumb" x1="170" y1="78" x2="170" y2="158"/>
+    <g id="flagG" visibility="hidden">
+      <line x1="0" y1="126" x2="0" y2="158" style="stroke:var(--ink)" stroke-width="2"/>
+      <path class="flag" d="M0 126 L22 132 L0 138 Z"/>
+      <text id="flagTxt" class="flagtxt" x="6" y="152"></text>
+    </g>
+    <g id="pumpG">
+      <path id="tube" class="tube" d=""/>
+      <rect class="pumpbody" x="54" y="98" width="26" height="58" rx="5"/>
+      <g id="handle"><line class="pumprod" x1="67" y1="98" x2="67" y2="74"/><rect x="50" y="68" width="34" height="8" rx="4" style="fill:var(--ink)"/></g>
+    </g>
+    <g id="puffs"></g>
+    <g id="car">
+      <ellipse id="bal" class="balloon" cx="0" cy="100" rx="20" ry="14"/>
+      <path id="neck" class="balloon" d=""/>
+      <ellipse id="balHi" class="hi" cx="6" cy="94" rx="6" ry="3"/>
+      <rect class="strawc" x="-40" y="66" width="80" height="8" rx="3"/>
+      <rect class="tapebit" x="-18" y="64" width="7" height="16"/>
+      <rect class="tapebit" x="11" y="64" width="7" height="16"/>
+    </g>
+    <g id="forces" display="none" aria-hidden="true">
+      <line id="fthrustL" class="sthrust" stroke-width="4" marker-end="url(#mThrust)"/><text id="fthrustT" class="ftxt fthrust"></text>
+      <line id="fdragL" class="sdrag" stroke-width="4" marker-end="url(#mDrag)"/><text id="fdragT" class="ftxt fdrag"></text>
+      <line id="ffricL" class="sfric" stroke-width="4" marker-end="url(#mFric)"/><text id="ffricT" class="ftxt ffric"></text>
+    </g>
+  </svg>
+  <div class="note" id="scaleNote"></div>
+</section>
+
+<div class="row">
+  <section class="panel" aria-label="Controls">
+    <div class="controls">
+      <button id="pumpBtn" class="primary pumpbtn" type="button">Pump air</button>
+      <span class="count" id="pumpCount"></span>
+      <button id="goBtn" class="go" type="button" disabled>Release</button>
+      <button id="resetBtn" type="button">Start over</button>
+    </div>
+    <div class="controls">
+      <label class="pred">How far will it go? <input id="pred" type="number" min="0" step="0.1" inputmode="decimal"> <span data-unit="dist"></span></label>
+      <label class="chk"><input id="forcesChk" type="checkbox"> Show forces</label>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </section>
+  <section class="panel measure" aria-label="Live measurements">
+    <div class="readouts">
+      <div class="ro big"><div class="k">Distance</div><div class="v"><span id="rDist"></span> <small data-unit="dist"></small></div></div>
+      <div class="ro big"><div class="k">Time moving</div><div class="v"><span id="rTime"></span> <small data-unit="time"></small></div></div>
+      <div class="ro big"><div class="k">Speed</div><div class="v"><span id="rSpeed"></span> <small data-unit="speed"></small></div></div>
+      <div class="ro"><div class="k">Air added</div><div class="v"><span id="rAir"></span> <small data-unit="air"></small></div></div>
+      <div class="ro"><div class="k">Air in balloon</div><div class="v"><span id="rVol"></span> <small data-unit="air"></small></div></div>
+      <div class="ro"><div class="k">Balloon width</div><div class="v"><span id="rDia"></span> <small data-unit="width"></small></div></div>
+    </div>
+    <div class="units">
+      <span class="k" id="unitsLbl">Units</span>
+      <div class="seg" role="group" aria-labelledby="unitsLbl">
+        <button type="button" id="uMetric" data-system="metric" aria-pressed="true">Metric</button>
+        <button type="button" id="uImperial" data-system="imperial" aria-pressed="false">Imperial</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="row">
+  <section class="panel" aria-label="Your data">
+    <div class="datahead">
+      <h2>Your data</h2>
+      <label class="name">Name or group <input id="nameIn" type="text" maxlength="40" autocomplete="off"></label>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="tools">
+      <button id="csvBtn" type="button" disabled>Download CSV</button>
+      <button id="copyBtn" type="button" disabled>Copy table</button>
+      <button id="undoBtn" type="button" disabled>Delete last trial</button>
+      <button id="clearBtn" type="button" disabled>Clear all</button>
+    </div>
+    <p class="warn" id="storeWarn" hidden>This browser isn’t saving your data. Download the CSV or copy the table before you close this tab.</p>
+  </section>
+  <section class="panel graph" aria-label="Graph of distance versus pumps">
+    <h2>Distance vs pumps</h2>
+    <svg id="graph" viewBox="0 0 520 210" role="img" aria-label="Scatter graph of distance traveled for each number of pumps"></svg>
+  </section>
+</div>
+<footer>Keyboard: Space pumps, Enter releases, R starts over. The physics is a simple model built from published measurements (see Sources); distances are estimates, not measurements of your string.</footer>
+</div>
+
+<dialog id="srcDlg" aria-labelledby="srcH">
+  <h2 id="srcH">Where the numbers come from</h2>
+  <p>The sim uses standard equations for balloon pressure, jet thrust, air resistance and friction. Every equation and constant comes from these sources, except three: the balloon size and its dry mass are estimates for a 12 inch latex balloon, and the string friction is tuned so distances match classroom strings.</p>
+  <ol id="srcList"></ol>
+  <div class="dlgbtns"><button type="button" data-close>Close</button></div>
+</dialog>
+
+<dialog id="setDlg" aria-labelledby="setH">
+  <form id="setForm" method="dialog" novalidate>
+    <h2 id="setH">Teacher settings</h2>
+    <p>Saving starts a fresh balloon. Start a new set of trials after a change so the data stays comparable.</p>
+    <div class="set">
+      <label for="sPump">Air per pump (<span data-unit="air"></span>)<small>One push of the pump counts as one pump.</small></label>
+      <input id="sPump" type="number" inputmode="decimal" required>
+      <label for="sMax">Most pumps allowed (1 to 8)</label>
+      <input id="sMax" type="number" inputmode="numeric" required>
+      <label for="sLen">String length (<span data-unit="dist"></span>)</label>
+      <input id="sLen" type="number" inputmode="decimal" required>
+      <label for="sVar">Small differences between repeat trials (about 5%), like real trials</label>
+      <input id="sVar" type="checkbox">
+    </div>
+    <p class="warn" id="setErr" hidden></p>
+    <div class="dlgbtns">
+      <button type="button" id="sDefaults" class="left">Restore defaults</button>
+      <button type="button" data-close>Cancel</button>
+      <button type="submit" class="primary">Save settings</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="physics.js"></script>
+<script src="units.js"></script>
+<script src="state.js"></script>
+<script src="playback.js"></script>
+<script src="data.js"></script>
+<script src="csv.js"></script>
+<script src="settings.js"></script>
+<script src="sources.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

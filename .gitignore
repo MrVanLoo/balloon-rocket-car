@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Personal Claude Code settings (launch.json and serve-dist.mjs are shared dev tools)
+.claude/settings.local.json
+
+# Dependencies (none today, but keep them out if added)
+node_modules/

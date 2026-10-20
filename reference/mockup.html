@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Balloon rocket car simulator (mockup)</title>
+<style>
+:root{
+  --wall:#E9EFF3; --surface:#FFFFFF; --ink:#1D2A39; --muted:#556476; --line:#C9D3DC;
+  --tape:#F3C623; --tape-ink:#3B2F00; --balloon:#E5484D; --balloon-hi:#FFFFFF;
+  --accent:#1F6FB2; --accent-ink:#FFFFFF; --string:#7A5A3A; --post:#8B6B4A;
+  --thrust:#1F7A4D; --drag:#B4432F; --fric:#7A4FB0; --focus:#FFB000;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --wall:#111920; --surface:#1A242E; --ink:#E5ECF2; --muted:#9AA9B8; --line:#2E3C49;
+    --tape:#E0B21C; --tape-ink:#2A2100; --balloon:#F2575C; --balloon-hi:#FFFFFF;
+    --accent:#5AA9E6; --accent-ink:#0B1620; --string:#C9A27A; --post:#9C7C5A;
+    --thrust:#4CC28A; --drag:#F07A62; --fric:#B48CF0; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --wall:#111920; --surface:#1A242E; --ink:#E5ECF2; --muted:#9AA9B8; --line:#2E3C49;
+  --tape:#E0B21C; --tape-ink:#2A2100; --balloon:#F2575C; --balloon-hi:#FFFFFF;
+  --accent:#5AA9E6; --accent-ink:#0B1620; --string:#C9A27A; --post:#9C7C5A;
+  --thrust:#4CC28A; --drag:#F07A62; --fric:#B48CF0; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--wall);color:var(--ink);font:15px/1.45 Roboto,"Segoe UI",system-ui,-apple-system,sans-serif}
+.wrap{max-width:1400px;margin:0 auto;padding:10px 16px 12px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+h1{font-size:1.45rem;margin:0;font-weight:700;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);flex:1 1 260px}
+.hbtns{display:flex;gap:8px}
+button,.btn{font:inherit;cursor:pointer;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px;min-height:44px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button.go{background:var(--balloon);border-color:var(--balloon);color:#fff;font-weight:700}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.stage{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow-x:auto}
+.stage svg{display:block;width:100%;min-width:760px;height:auto}
+.note{font-size:.8rem;color:var(--muted);padding:0 12px 8px}
+.row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;margin-top:10px}
+.panel{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pumpbtn{font-size:1.05rem;font-weight:700;min-width:150px}
+.count{font-variant-numeric:tabular-nums;font-weight:700}
+label.chk{display:flex;align-items:center;gap:6px;min-height:44px;cursor:pointer}
+label.chk input{width:20px;height:20px}
+.pred{display:flex;align-items:center;gap:6px}
+.pred input,.name input,dialog input[type=number]{font:inherit;width:84px;padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.name input{width:170px}
+.readouts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px}
+.ro .k{font-size:.8rem;color:var(--muted)}
+.ro .v{font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums}
+.ro .v small{font-size:.85rem;font-weight:500;color:var(--muted)}
+.ro.big .v{font-size:1.7rem}
+.status{margin-top:8px;min-height:1.4em;font-weight:600}
+.datahead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.datahead h2,.graph h2{font-size:1.05rem;margin:0 auto 0 0}
+.tablewrap{max-height:168px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem}
+th,td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);font-weight:600;color:var(--muted)}
+td:first-child,th:first-child{text-align:left}
+.empty td{text-align:center;color:var(--muted);padding:18px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.graph svg{width:100%;height:auto;max-height:200px;display:block}
+dialog{border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);max-width:min(680px,92vw);padding:18px 20px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 10px;font-size:1.2rem}
+dialog ol{padding-left:1.2em;margin:0 0 12px}
+dialog li{margin-bottom:6px}
+dialog a{color:var(--accent)}
+.set{display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;margin-bottom:14px}
+.dlgbtns{display:flex;justify-content:flex-end;gap:8px}
+.sr{position:absolute;left:-9999px}
+footer{margin-top:10px;font-size:.8rem;color:var(--muted)}
+@media (max-width:900px){.row{grid-template-columns:1fr}.readouts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* scene */
+.tape{fill:var(--tape)} .tick{stroke:var(--tape-ink)} .tlabel{fill:var(--tape-ink);font-size:11px;font-weight:700}
+.str{stroke:var(--string)} .post{fill:var(--post)}
+.balloon{fill:var(--balloon)} .hi{fill:var(--balloon-hi);opacity:.35}
+.strawc{fill:var(--surface);stroke:var(--muted);stroke-width:1.2}
+.tapebit{fill:var(--muted);opacity:.55}
+.plumb{stroke:var(--muted);stroke-dasharray:3 4}
+.pumpbody{fill:var(--accent);opacity:.9} .pumprod{stroke:var(--muted);stroke-width:4} .tube{stroke:var(--muted);stroke-width:3;fill:none}
+.flag{fill:var(--balloon)} .flagtxt{fill:var(--ink);font-size:13px;font-weight:700}
+.puff{fill:var(--muted);opacity:.0}
+.ftxt{font-size:11px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Balloon rocket car</h1>
+  <p>Pump air into the balloon, let it go, and see how far it rides along the string.</p>
+  <div class="hbtns">
+    <button id="srcBtn" type="button">Sources</button>
+    <button id="setBtn" type="button">Teacher settings</button>
+  </div>
+</header>
+
+<section class="stage" aria-label="Balloon rocket track">
+  <svg id="scene" viewBox="0 14 1000 186" role="img" aria-labelledby="sceneTitle">
+    <title id="sceneTitle">A balloon taped to a straw on a level string, with a tape measure from 0 to 10 meters below it</title>
+    <g id="arrowDefs"></g>
+    <rect class="post" x="26" y="58" width="12" height="130" rx="3"/>
+    <rect class="post" x="962" y="58" width="12" height="130" rx="3"/>
+    <line class="str" x1="32" y1="70" x2="968" y2="70" stroke-width="2"/>
+    <g id="tapeG"></g>
+    <line id="plumb" class="plumb" x1="170" y1="78" x2="170" y2="158"/>
+    <g id="flagG" visibility="hidden">
+      <line x1="0" y1="126" x2="0" y2="158" style="stroke:var(--ink)" stroke-width="2"/>
+      <path class="flag" d="M0 126 L22 132 L0 138 Z"/>
+      <text id="flagTxt" class="flagtxt" x="6" y="120">0.00 m</text>
+    </g>
+    <g id="pumpG">
+      <path id="tube" class="tube" d=""/>
+      <rect class="pumpbody" x="54" y="98" width="26" height="58" rx="5"/>
+      <g id="handle"><line class="pumprod" x1="67" y1="98" x2="67" y2="74"/><rect x="50" y="68" width="34" height="8" rx="4" style="fill:var(--ink)"/></g>
+    </g>
+    <g id="puffs"></g>
+    <g id="car">
+      <ellipse id="bal" class="balloon" cx="0" cy="100" rx="20" ry="14"/>
+      <path id="neck" class="balloon" d=""/>
+      <ellipse id="balHi" class="hi" cx="6" cy="94" rx="6" ry="3"/>
+      <rect class="strawc" x="-40" y="66" width="80" height="8" rx="3"/>
+      <rect class="tapebit" x="-18" y="64" width="7" height="16"/>
+      <rect class="tapebit" x="11" y="64" width="7" height="16"/>
+    </g>
+    <g id="forces" visibility="hidden">
+      <line id="fT" style="stroke:var(--thrust)" stroke-width="4" marker-end="url(#mT)"/>
+      <text id="fTt" class="ftxt" style="fill:var(--thrust)"></text>
+      <line id="fD" style="stroke:var(--drag)" stroke-width="4" marker-end="url(#mD)"/>
+      <text id="fDt" class="ftxt" style="fill:var(--drag)"></text>
+      <line id="fF" style="stroke:var(--fric)" stroke-width="4" marker-end="url(#mF)"/>
+      <text id="fFt" class="ftxt" style="fill:var(--fric)"></text>
+    </g>
+  </svg>
+  <div class="note">Balloon, straw and pump are drawn 5 times actual size so you can see them. Distances on the tape measure are true to scale.</div>
+</section>
+
+<div class="row">
+  <section class="panel" aria-label="Controls">
+    <div class="controls">
+      <button id="pumpBtn" class="primary pumpbtn" type="button">Pump air</button>
+      <span class="count" id="pumpCount">0 of 5 pumps</span>
+      <button id="goBtn" class="go" type="button" disabled>Release</button>
+      <button id="resetBtn" type="button">Start over</button>
+    </div>
+    <div class="controls" style="margin-top:8px">
+      <label class="pred">How far will it go? <input id="pred" type="number" min="0" max="20" step="0.1" inputmode="decimal" aria-label="Your prediction in meters"> m</label>
+      <label class="chk"><input id="forcesChk" type="checkbox"> Show forces</label>
+    </div>
+    <div class="status" id="status" aria-live="polite">Press Pump air to start filling the balloon.</div>
+  </section>
+  <section class="panel" aria-label="Live measurements">
+    <div class="readouts">
+      <div class="ro big"><div class="k">Distance</div><div class="v"><span id="rDist">0.00</span> <small>m</small></div></div>
+      <div class="ro big"><div class="k">Time moving</div><div class="v"><span id="rTime">0.00</span> <small>s</small></div></div>
+      <div class="ro big"><div class="k">Speed</div><div class="v"><span id="rSpeed">0.0</span> <small>m/s</small></div></div>
+      <div class="ro"><div class="k">Air added</div><div class="v"><span id="rAir">0.00</span> <small>L</small></div></div>
+      <div class="ro"><div class="k">Air in balloon</div><div class="v"><span id="rVol">0.18</span> <small>L</small></div></div>
+      <div class="ro"><div class="k">Balloon width</div><div class="v"><span id="rDia">7.0</span> <small>cm</small></div></div>
+    </div>
+  </section>
+</div>
+
+<div class="row">
+  <section class="panel" aria-label="Your data">
+    <div class="datahead">
+      <h2>Your data</h2>
+      <label class="name">Name or group <input id="nameIn" type="text" maxlength="40" autocomplete="off"></label>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Trial</th><th>Pumps</th><th>Air added (L)</th><th>Distance (m)</th><th>Time (s)</th><th>Top speed (m/s)</th><th>Prediction (m)</th></tr></thead>
+        <tbody id="tbody"><tr class="empty"><td colspan="7">No trials yet. Each release adds a row here.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="tools">
+      <button id="csvBtn" type="button" disabled>Download CSV</button>
+      <button id="copyBtn" type="button" disabled>Copy table</button>
+      <button id="undoBtn" type="button" disabled>Delete last trial</button>
+      <button id="clearBtn" type="button" disabled>Clear all</button>
+    </div>
+  </section>
+  <section class="panel graph" aria-label="Graph of distance versus pumps">
+    <h2>Distance vs pumps</h2>
+    <svg id="graph" viewBox="0 0 520 210" role="img" aria-label="Scatter graph of distance traveled for each number of pumps"></svg>
+  </section>
+</div>
+<footer>Interface mockup for the build spec. The physics is the draft model from the spec; numbers are estimates, not measurements of your string.</footer>
+</div>
+
+<dialog id="srcDlg" aria-labelledby="srcH">
+  <h2 id="srcH">Where the numbers come from</h2>
+  <ol id="srcList"></ol>
+  <div class="dlgbtns"><button type="button" data-close>Close</button></div>
+</dialog>
+
+<dialog id="setDlg" aria-labelledby="setH">
+  <h2 id="setH">Teacher settings</h2>
+  <div class="set">
+    <label for="sPump">Air per pump (L)</label><input id="sPump" type="number" min="0.05" max="5" step="0.05">
+    <label for="sMax">Most pumps allowed</label><input id="sMax" type="number" min="1" max="10" step="1">
+    <label for="sLen">String length (m)</label><input id="sLen" type="number" min="3" max="20" step="1">
+    <label for="sVar">Small differences between repeat trials (about 5%)</label><input id="sVar" type="checkbox" style="width:22px;height:22px">
+  </div>
+  <div class="dlgbtns"><button type="button" data-close>Cancel</button><button id="sSave" class="primary" type="button">Save settings</button></div>
+</dialog>
+<div id="sr" class="sr" aria-live="assertive"></div>
+<script>
+const CONFIG = {
+  pumpL: 0.5,        // air per pump (L), teacher setting
+  maxPumps: 5,
+  R0: 0.035,         // unstretched balloon radius (m), 12 in balloon estimate
+  peakP: 3300,       // peak gauge pressure (Pa), Vandermarliere 2016
+  alpha: 0.05,       // Mooney-Rivlin style stiffening term
+  deflate: 0.85,     // deflation curve below inflation curve (hysteresis)
+  neckD: 0.008,      // neck opening diameter (m)
+  CdNeck: 0.6,       // orifice discharge coefficient, Engineering ToolBox
+  CdBody: 0.5,       // sphere drag coefficient, NASA Glenn
+  rho: 1.2,          // air density (kg/m^3)
+  dryMass: 0.0045,   // balloon + straw + tape (kg)
+  mu: 0.8,           // effective friction, tuned to classroom distances
+  g: 9.81,
+  stringM: 10,       // string length (m)
+  dt: 0.001,         // physics step (s)
+  variation: false   // +/-5% on friction and neck flow per trial
+};
+function shapeFn(l, a) { return (1 / l - 1 / Math.pow(l, 7)) * (1 + a * l * l); }
+function pressureK(c) {
+  let best = 0;
+  for (let l = 1.001; l < 5; l += 0.001) best = Math.max(best, shapeFn(l, c.alpha));
+  return c.peakP / best;
+}
+function gaugePressure(V, c, K) {
+  const V0 = 4 / 3 * Math.PI * c.R0 ** 3;
+  const l = Math.cbrt(V / V0);
+  return l <= 1 ? 0 : K * shapeFn(l, c.alpha);
+}
+function simulate(pumps, c, rand) {
+  rand = rand || Math.random;
+  const vary = (k) => c.variation ? k * (1 + 0.05 * (2 * rand() - 1)) : k;
+  const mu = vary(c.mu), CdN = vary(c.CdNeck);
+  const K = pressureK(c);
+  const V0 = 4 / 3 * Math.PI * c.R0 ** 3;
+  const An = Math.PI * (c.neckD / 2) ** 2;
+  let V = V0 + pumps * c.pumpL / 1000, x = 0, v = 0, t = 0, vmax = 0, burn = null, reachedEnd = false;
+  const out = { t: [], x: [], v: [], vol: [], thrust: [], drag: [], fric: [] };
+  while (t < 30) {
+    const dP = gaugePressure(V, c, K) * c.deflate;
+    let F = 0;
+    if (V > V0 * 1.02 && dP > 5) {
+      const ve = Math.sqrt(2 * dP / c.rho), Q = CdN * An * ve;
+      F = c.rho * Q * ve;
+      V = Math.max(V0, V - Q * c.dt);
+    } else if (burn === null) burn = t;
+    const r = Math.cbrt(3 * V / (4 * Math.PI));
+    const m = c.dryMass + 1.5 * c.rho * V; // air inside + added mass (half displaced air)
+    const D = 0.5 * c.rho * c.CdBody * Math.PI * r * r * v * v;
+    const fr = mu * m * c.g;
+    let a;
+    if (v <= 0 && F <= fr) { a = 0; if (F === 0 && t > 0.01) { out.t.push(t); out.x.push(x); out.v.push(0); out.vol.push(V); out.thrust.push(0); out.drag.push(0); out.fric.push(0); break; } }
+    else a = (F - D - fr) / m;
+    v = Math.max(0, v + a * c.dt);
+    x += v * c.dt; t += c.dt;
+    if (x >= c.stringM) { x = c.stringM; v = 0; reachedEnd = true; }
+    vmax = Math.max(vmax, v);
+    out.t.push(t); out.x.push(x); out.v.push(v); out.vol.push(V);
+    out.thrust.push(F); out.drag.push(D); out.fric.push(v > 0 ? fr : 0);
+    if (reachedEnd) break;
+  }
+  return Object.assign(out, { distance: x, duration: t, vmax, burn: burn ?? t, reachedEnd, startVol: V0 + pumps * c.pumpL / 1000 });
+}
+
+const SOURCES = [
+  ["Vandermarlière, J. (2016). On the inflation of a rubber balloon. The Physics Teacher 54, 566.", "https://physlab.org/wp-content/uploads/2023/01/1.4967901.pdf", "Balloon pressure peaks near 3% above room pressure, then falls; lower pressure while deflating."],
+  ["Merritt, D. R. and Weinhaus, F. (1978). The pressure curve for a rubber balloon. American Journal of Physics 46, 976.", "https://eric.ed.gov/?id=EJ193106", "Theory of how balloon pressure changes with size."],
+  ["NASA Glenn Research Center. Rocket Thrust Equation.", "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-thrust-equation/", "Thrust equals mass flow times exit speed, plus a pressure term."],
+  ["NASA Glenn Research Center. Drag Equation.", "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/drag-equation/", "Air resistance grows with speed squared and frontal area."],
+  ["NASA Glenn Research Center. Shape Effects on Drag.", "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/shape-effects-on-drag/", "Drag coefficient of a sphere (0.07 to 0.5)."],
+  ["NASA Glenn Research Center. Flight Equations with Drag.", "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/flight-equations-with-drag/", "How drag slows a moving object over time."],
+  ["Engineering ToolBox. Orifice, Nozzle and Venturi Flow Rate Meters.", "https://www.engineeringtoolbox.com/orifice-nozzle-venturi-d_590.html", "Flow through an opening; discharge coefficient of about 0.6."],
+  ["Balloons Wiki. Balloon Pumps.", "https://balloons.fandom.com/wiki/Balloon_Pumps", "How much air different hand pumps move per stroke."],
+  ["NASA JPL Education. Simple Rocket Science Continued (lesson plan).", "https://www.jpl.nasa.gov/edu/resources/lesson-plan/simple-rocket-science-continued/", "Classroom version of this investigation: amount of air vs distance."],
+  ["Science World. Balloon Rockets.", "https://www.scienceworld.ca/resource/balloon-rockets/", "Classroom setup with a 3 m string."],
+  ["FLEET. Balloon rocket home-science experiment.", "https://archive.fleet.org.au/blog/balloon-rocket/", "Setup with a 7 to 8 m string; repeat trials."],
+  ["Science Friday. Balloon Rockets.", "https://www.sciencefriday.com/educational-resources/balloon-rockets/", "Why escaping air pushes the balloon (Newton’s third law)."],
+  ["NGSS Lead States. MS-PS2-2 evidence statement.", "https://www.nextgenscience.org/sites/default/files/evidence_statement/black_white/MS-PS2-2%20Evidence%20Statements%20June%202015%20asterisks.pdf", "Standard this investigation supports."],
+  ["Shafranovich, Y. (2005). RFC 4180: Common Format and MIME Type for CSV Files.", "https://www.rfc-editor.org/rfc/rfc4180.html", "Format of the data file."],
+  ["Rows. How to import CSV files in Google Sheets.", "https://rows.com/blog/post/import-csv-google-sheets", "Steps for opening the data file in Google Sheets."]
+];
+
+const $ = (id) => document.getElementById(id);
+const STORE = "balloonRocket.v1";
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const cfg = Object.assign({}, CONFIG);
+let trials = [];
+let K = pressureK(cfg);
+
+// ---------- persistence ----------
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE) || "null");
+    if (s) {
+      trials = Array.isArray(s.trials) ? s.trials : [];
+      if (s.settings) Object.assign(cfg, s.settings);
+      $("nameIn").value = s.name || "";
+    }
+  } catch (e) { /* storage blocked: keep defaults */ }
+}
+function save() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ trials, name: $("nameIn").value,
+      settings: { pumpL: cfg.pumpL, maxPumps: cfg.maxPumps, stringM: cfg.stringM, variation: cfg.variation } }));
+  } catch (e) { setStatus("This browser is not saving data. Download your CSV before closing."); }
+}
+
+// ---------- geometry ----------
+const X0 = 170, XEND = 950, BS = 390; // BS: balloon pixels per meter (drawn larger than scale)
+const pxm = () => (XEND - X0) / cfg.stringM;
+const X = (m) => X0 + m * pxm();
+const V0 = () => 4 / 3 * Math.PI * cfg.R0 ** 3;
+const radiusOf = (V) => Math.cbrt(3 * V / (4 * Math.PI));
+
+function drawTape() {
+  let s = `<rect class="tape" x="${X0 - 6}" y="158" width="${XEND - X0 + 12}" height="24" rx="3"/>`;
+  const steps = Math.round(cfg.stringM * 10);
+  for (let i = 0; i <= steps; i++) {
+    const x = X(i / 10).toFixed(1);
+    const h = i % 10 === 0 ? 12 : i % 5 === 0 ? 8 : 4;
+    s += `<line class="tick" x1="${x}" y1="158" x2="${x}" y2="${158 + h}" stroke-width="${i % 10 === 0 ? 1.6 : 1}"/>`;
+    if (i % 10 === 0) s += `<text class="tlabel" x="${i === 0 ? X0 - 2 : x}" y="179" text-anchor="${i === 0 ? "start" : "middle"}">${i / 10}${i === 0 ? " m" : ""}</text>`;
+  }
+  $("tapeG").innerHTML = s;
+  document.querySelector(".note").textContent =
+    `Balloon, straw and pump are drawn ${Math.round(BS / pxm())} times actual size so you can see them. Distances on the tape measure are true to scale.`;
+}
+
+function drawCar(posM, V) {
+  const r = radiusOf(V) * BS, rx = 1.3 * r, ry = 0.88 * r, cx = -4, cy = 75 + ry;
+  $("bal").setAttribute("rx", rx.toFixed(1)); $("bal").setAttribute("ry", ry.toFixed(1));
+  $("bal").setAttribute("cx", cx); $("bal").setAttribute("cy", cy.toFixed(1));
+  const nx = cx - rx + 3;
+  $("neck").setAttribute("d", `M${nx} ${cy - 4} L${nx - 12} ${cy - 3} L${nx - 12} ${cy + 3} L${nx} ${cy + 4} Z`);
+  $("balHi").setAttribute("cx", (cx + rx * 0.35).toFixed(1)); $("balHi").setAttribute("cy", (cy - ry * 0.45).toFixed(1));
+  $("balHi").setAttribute("rx", (rx * 0.25).toFixed(1)); $("balHi").setAttribute("ry", (ry * 0.16).toFixed(1));
+  const px = X(posM);
+  $("car").setAttribute("transform", `translate(${px.toFixed(1)} 0)`);
+  $("plumb").setAttribute("x1", px.toFixed(1)); $("plumb").setAttribute("x2", px.toFixed(1));
+  const tipX = px + nx - 12, tipY = cy;
+  $("tube").setAttribute("d", `M67 156 C67 196 ${tipX - 40} ${tipY + 40} ${tipX} ${tipY}`);
+  return { tipX, tipY };
+}
+
+// ---------- readouts ----------
+function setStatus(t) { $("status").textContent = t; }
+function announce(t) { $("sr").textContent = t; }
+function showReadouts(o) {
+  if (o.dist !== undefined) $("rDist").textContent = o.dist.toFixed(2);
+  if (o.time !== undefined) $("rTime").textContent = o.time.toFixed(2);
+  if (o.speed !== undefined) $("rSpeed").textContent = o.speed.toFixed(1);
+  if (o.air !== undefined) $("rAir").textContent = o.air.toFixed(2);
+  if (o.vol !== undefined) {
+    $("rVol").textContent = (o.vol * 1000).toFixed(2);
+    $("rDia").textContent = (radiusOf(o.vol) * 200).toFixed(1);
+  }
+}
+
+// ---------- state ----------
+let phase = "ready", pumps = 0, shownV = V0(), anim = null, run = null, puffs = [];
+
+function updateButtons() {
+  $("pumpCount").textContent = `${pumps} of ${cfg.maxPumps} pumps`;
+  $("pumpBtn").disabled = !(phase === "ready" || phase === "inflating") || pumps >= cfg.maxPumps || anim !== null;
+  $("goBtn").disabled = !(phase === "inflating" && pumps > 0) || anim !== null;
+  $("resetBtn").disabled = phase === "moving";
+  $("pred").disabled = phase === "moving";
+  const has = trials.length > 0;
+  ["csvBtn", "copyBtn", "undoBtn", "clearBtn"].forEach((id) => $(id).disabled = !has || phase === "moving");
+}
+
+function pump() {
+  if ($("pumpBtn").disabled) return;
+  phase = "inflating";
+  pumps += 1;
+  const from = shownV, to = V0() + pumps * cfg.pumpL / 1000, dur = reduceMotion ? 0 : 400, t0 = performance.now();
+  anim = true; updateButtons();
+  const step = (now) => {
+    const k = dur ? Math.min(1, (now - t0) / dur) : 1;
+    const e = 1 - Math.pow(1 - k, 3);
+    shownV = from + (to - from) * e;
+    drawCar(0, shownV);
+    $("handle").setAttribute("transform", `translate(0 ${(Math.sin(Math.PI * k) * 26).toFixed(1)})`);
+    showReadouts({ air: pumps * cfg.pumpL, vol: shownV });
+    if (k < 1) requestAnimationFrame(step);
+    else {
+      anim = null; updateButtons();
+      const msg = pumps >= cfg.maxPumps
+        ? `${pumps} pumps. That’s the most air allowed. Press Release.`
+        : `${pumps} pump${pumps > 1 ? "s" : ""} in. Pump more or press Release.`;
+      setStatus(msg); announce(msg);
+    }
+  };
+  requestAnimationFrame(step);
+}
+
+function release() {
+  if ($("goBtn").disabled) return;
+  phase = "moving"; updateButtons();
+  run = simulate(pumps, cfg);
+  $("pumpG").style.transition = reduceMotion ? "none" : "opacity .35s";
+  $("pumpG").style.opacity = "0";
+  setStatus("Air rushes out the back. The balloon pushes on the air, and the air pushes the car forward.");
+  const t0 = performance.now(), n = run.t.length;
+  let lastPuff = 0;
+  const step = (now) => {
+    const el = (now - t0) / 1000;
+    const i = Math.min(n - 1, Math.floor(el / cfg.dt));
+    const tip = drawCar(run.x[i], run.vol[i]);
+    showReadouts({ dist: run.x[i], time: run.t[i], speed: run.v[i], vol: run.vol[i] });
+    drawForces(run.x[i], run.thrust[i], run.drag[i], run.fric[i], run.vol[i]);
+    if (!reduceMotion) {
+      if (run.thrust[i] > 0 && now - lastPuff > 45) { puffs.push({ x: tip.tipX, y: tip.tipY, born: now }); lastPuff = now; }
+      drawPuffs(now);
+    }
+    if (i < n - 1) requestAnimationFrame(step); else finish();
+  };
+  requestAnimationFrame(step);
+}
+
+function drawPuffs(now) {
+  puffs = puffs.filter((p) => now - p.born < 600);
+  $("puffs").innerHTML = puffs.map((p) => {
+    const a = (now - p.born) / 600;
+    return `<circle class="puff" cx="${(p.x - a * 60).toFixed(1)}" cy="${(p.y + Math.sin(p.born) * a * 8).toFixed(1)}" r="${(3 + a * 9).toFixed(1)}" style="opacity:${(0.45 * (1 - a)).toFixed(2)}"/>`;
+  }).join("");
+}
+
+function drawForces(posM, F, D, Fr, V) {
+  const on = $("forcesChk").checked && phase === "moving";
+  $("forces").setAttribute("visibility", on ? "visible" : "hidden");
+  if (!on) return;
+  const px = X(posM), k = 700;
+  const set = (line, txt, y, len, dir, label, val) => {
+    const show = val > 0.0005;
+    $(line).setAttribute("visibility", show ? "visible" : "hidden");
+    $(txt).setAttribute("visibility", show ? "visible" : "hidden");
+    if (!show) return;
+    const x2 = px + dir * Math.max(10, len);
+    $(line).setAttribute("x1", px); $(line).setAttribute("y1", y); $(line).setAttribute("x2", x2); $(line).setAttribute("y2", y);
+    $(txt).setAttribute("x", x2 + dir * 12); $(txt).setAttribute("y", y + 4);
+    $(txt).setAttribute("text-anchor", dir > 0 ? "start" : "end");
+    $(txt).textContent = `${label} ${val.toFixed(2)} N`;
+  };
+  set("fT", "fTt", 52, F * k, 1, "Thrust", F);
+  set("fD", "fDt", 38, D * k, -1, "Air resistance", D);
+  set("fF", "fFt", 24, Fr * k, -1, "Friction", Fr);
+}
+
+function finish() {
+  phase = "stopped";
+  $("puffs").innerHTML = ""; puffs = [];
+  drawForces(0, 0, 0, 0, 0);
+  const pred = parseFloat($("pred").value);
+  const tr = { trial: (trials.length ? trials[trials.length - 1].trial : 0) + 1, pumps, air: pumps * cfg.pumpL,
+    dist: run.distance, time: run.duration, vmax: run.vmax, pred: isFinite(pred) ? pred : null, end: run.reachedEnd };
+  trials.push(tr); save();
+  $("flagG").setAttribute("transform", `translate(${X(run.distance).toFixed(1)} 0)`);
+  $("flagTxt").textContent = `${run.distance.toFixed(2)} m`;
+  $("flagG").setAttribute("visibility", "visible");
+  let msg = `Trial ${tr.trial}: ${pumps} pump${pumps > 1 ? "s" : ""}, ${run.distance.toFixed(2)} m${run.reachedEnd ? " (reached the end of the string)" : ""}.`;
+  if (tr.pred !== null) msg += ` You predicted ${tr.pred} m.`;
+  setStatus(msg + " Press Start over for the next trial."); announce(msg);
+  renderTable(); renderGraph(); updateButtons();
+}
+
+function reset() {
+  if (phase === "moving") return;
+  phase = "ready"; pumps = 0; shownV = V0(); run = null; anim = null;
+  $("pumpG").style.opacity = "1";
+  $("flagG").setAttribute("visibility", "hidden");
+  $("handle").removeAttribute("transform");
+  $("pred").value = "";
+  drawCar(0, shownV);
+  showReadouts({ dist: 0, time: 0, speed: 0, air: 0, vol: shownV });
+  setStatus("Press Pump air to start filling the balloon.");
+  updateButtons();
+}
+
+// ---------- table, graph ----------
+function renderTable() {
+  const tb = $("tbody");
+  if (!trials.length) { tb.innerHTML = `<tr class="empty"><td colspan="7">No trials yet. Each release adds a row here.</td></tr>`; return; }
+  tb.innerHTML = trials.slice().reverse().map((r) =>
+    `<tr><td>${r.trial}</td><td>${r.pumps}</td><td>${r.air.toFixed(2)}</td><td>${r.dist.toFixed(2)}</td><td>${r.time.toFixed(2)}</td><td>${r.vmax.toFixed(2)}</td><td>${r.pred === null ? "" : r.pred}</td></tr>`).join("");
+}
+
+function renderGraph() {
+  const W = 520, H = 210, L = 46, R = 12, T = 12, B = 40;
+  const maxY = cfg.stringM, maxX = cfg.maxPumps;
+  const gx = (p) => L + (p - 0.5) / maxX * (W - L - R);
+  const gy = (d) => T + (1 - d / maxY) * (H - T - B);
+  let s = "";
+  for (let d = 0; d <= maxY; d += maxY > 10 ? 4 : 2) {
+    s += `<line x1="${L}" x2="${W - R}" y1="${gy(d)}" y2="${gy(d)}" style="stroke:var(--line)"/>`;
+    s += `<text x="${L - 6}" y="${gy(d) + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${d}</text>`;
+  }
+  for (let p = 1; p <= maxX; p++) s += `<text x="${gx(p)}" y="${H - B + 16}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${p}</text>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle" font-size="12" style="fill:var(--ink)">Pumps of air</text>`;
+  s += `<text transform="translate(13 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle" font-size="12" style="fill:var(--ink)">Distance (m)</text>`;
+  const seen = {};
+  trials.forEach((r) => {
+    const k = seen[r.pumps] = (seen[r.pumps] || 0) + 1;
+    const jitter = ((k % 5) - 2) * 4;
+    s += `<circle cx="${(gx(r.pumps) + jitter).toFixed(1)}" cy="${gy(Math.min(r.dist, maxY)).toFixed(1)}" r="5" style="fill:var(--balloon);stroke:var(--surface);stroke-width:1.5"><title>Trial ${r.trial}: ${r.pumps} pumps, ${r.dist.toFixed(2)} m</title></circle>`;
+  });
+  if (!trials.length) s += `<text x="${(L + W - R) / 2}" y="${(T + H - B) / 2}" text-anchor="middle" font-size="13" style="fill:var(--muted)">Points appear here after each trial</text>`;
+  $("graph").innerHTML = s;
+}
+
+// ---------- export ----------
+const HEAD = ["Trial", "Pumps", "Air added (L)", "Distance (m)", "Time moving (s)", "Top speed (m/s)", "Prediction (m)", "Reached end of string"];
+const rowVals = (r) => [r.trial, r.pumps, r.air.toFixed(2), r.dist.toFixed(2), r.time.toFixed(2), r.vmax.toFixed(2), r.pred === null ? "" : r.pred, r.end ? "yes" : "no"];
+const q = (v) => { v = String(v); return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+function toCSV() { return [HEAD, ...trials.map(rowVals)].map((r) => r.map(q).join(",")).join("\r\n") + "\r\n"; }
+function toTSV() { return [HEAD, ...trials.map(rowVals)].map((r) => r.join("\t")).join("\n"); }
+function fileName() {
+  const d = new Date(), pad = (n) => String(n).padStart(2, "0");
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const nm = $("nameIn").value.trim().replace(/\s+/g, "-").replace(/[^A-Za-z0-9-]/g, "");
+  return `balloon-rocket-${nm || "data"}-${date}.csv`;
+}
+let downloadsCap;
+async function getDownloads() {
+  if (downloadsCap !== undefined) return downloadsCap;
+  try { downloadsCap = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null; }
+  catch (e) { downloadsCap = null; }
+  return downloadsCap;
+}
+async function downloadCSV() {
+  const csv = toCSV(), name = fileName();
+  const dl = await getDownloads();
+  if (dl) {
+    try { await dl.save({ filename: name, data: csv }); setStatus(`Saved ${name}.`); }
+    catch (e) { if (e && e.code !== "declined") setStatus("Download isn’t available here. Use Copy table instead."); }
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus(`Saved ${name} to your Downloads folder.`);
+}
+async function copyTable() {
+  const text = toTSV();
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e2) {} ta.remove();
+  }
+  setStatus("Table copied. In Google Sheets, click cell A1 and paste.");
+}
+
+// ---------- dialogs ----------
+function openSources() {
+  $("srcList").innerHTML = SOURCES.map(([t, u, use]) =>
+    `<li><a href="${u}" target="_blank" rel="noopener">${t}</a><br><span style="color:var(--muted)">${use}</span></li>`).join("");
+  $("srcDlg").showModal();
+}
+function openSettings() {
+  $("sPump").value = cfg.pumpL; $("sMax").value = cfg.maxPumps; $("sLen").value = cfg.stringM; $("sVar").checked = cfg.variation;
+  $("setDlg").showModal();
+}
+function saveSettings() {
+  const clamp = (v, lo, hi, d) => (isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  cfg.pumpL = clamp(parseFloat($("sPump").value), 0.05, 5, CONFIG.pumpL);
+  cfg.maxPumps = Math.round(clamp(parseFloat($("sMax").value), 1, 10, CONFIG.maxPumps));
+  cfg.stringM = Math.round(clamp(parseFloat($("sLen").value), 3, 20, CONFIG.stringM));
+  cfg.variation = $("sVar").checked;
+  K = pressureK(cfg);
+  save(); $("setDlg").close();
+  drawTape(); reset(); renderGraph();
+  setStatus("Settings saved. Start a new set of trials so the data stays comparable.");
+}
+
+// ---------- wire up ----------
+$("pumpBtn").addEventListener("click", pump);
+$("goBtn").addEventListener("click", release);
+$("resetBtn").addEventListener("click", reset);
+$("csvBtn").addEventListener("click", downloadCSV);
+$("copyBtn").addEventListener("click", copyTable);
+$("undoBtn").addEventListener("click", () => { trials.pop(); save(); renderTable(); renderGraph(); updateButtons(); setStatus("Last trial deleted."); });
+$("clearBtn").addEventListener("click", () => { if (confirm("Delete all trials? This can’t be undone.")) { trials = []; save(); renderTable(); renderGraph(); updateButtons(); setStatus("All trials deleted."); } });
+$("srcBtn").addEventListener("click", openSources);
+$("setBtn").addEventListener("click", openSettings);
+$("sSave").addEventListener("click", saveSettings);
+$("nameIn").addEventListener("change", save);
+document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
+document.addEventListener("keydown", (e) => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (["input", "textarea", "select", "button"].includes(tag) || document.querySelector("dialog[open]")) return;
+  if (e.code === "Space") { e.preventDefault(); pump(); }
+  else if (e.key === "Enter") { e.preventDefault(); release(); }
+  else if (e.key === "r" || e.key === "R") reset();
+});
+
+(function init() {
+  const ns = "http://www.w3.org/2000/svg";
+  const defs = document.createElementNS(ns, "defs");
+  defs.innerHTML = ["T:thrust", "D:drag", "F:fric"].map((s) => {
+    const [id, c] = s.split(":");
+    return `<marker id="m${id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" style="fill:var(--${c})"/></marker>`;
+  }).join("");
+  $("scene").insertBefore(defs, $("scene").firstChild);
+  load(); K = pressureK(cfg);
+  drawTape(); reset(); renderTable(); renderGraph();
+})();
+</script>
+</body></html>
